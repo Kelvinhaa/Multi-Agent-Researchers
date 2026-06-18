@@ -4,7 +4,7 @@ from langgraph.graph.message import add_messages
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from agent.state import AgentState
-from agent.tools import tool
+from agent.tools import tools
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -17,7 +17,7 @@ class CriticOutput(BaseModel):
     should_retry: bool = Field(description="...")
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
-llm_with_tools = llm.bind_tools(tool)
+llm_with_tools = llm.bind_tools(tools)
 critic_llm = ChatOpenAI(model="gpt-4o-mini").with_structured_output(CriticOutput)
 
 def researcher(state: AgentState) -> dict:
