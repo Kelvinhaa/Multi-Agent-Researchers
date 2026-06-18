@@ -9,32 +9,16 @@ An autonomous multi-agent research assistant built with LangGraph, FastAPI, and 
 ## Commands
 
 ```bash
-# Install dependencies (manages venv and Python version automatically)
 uv sync
-
-# Start the API server (with hot reload)
 PYTHONPATH=. uv run uvicorn api.routes:app --reload
-
-# Run tests
 PYTHONPATH=. uv run pytest tests/ -v
-
-# Run a single test file or test
 PYTHONPATH=. uv run pytest tests/test_agent.py::test_name -v
-
-# Lint and format
-uv run ruff format .
-uv run ruff check .
-
-# Ingest documents into Pinecone
+uv run ruff format . && uv run ruff check .
 uv run python -m rag.ingest docs/
-
-# Add a dependency
 uv add <package-name>
 ```
 
 ## Environment variables
-
-Copy `.env.example` to `.env` and populate:
 
 ```
 OPENAI_API_KEY=sk-...
@@ -48,34 +32,31 @@ Pinecone index must be created with dimension `1536` (matching `text-embedding-3
 
 ## Architecture
 
-### Agent graph (`agent/`)
+**Node flow:** `supervisor → researcher → writer → critic → (END or back to researcher)`
 
-The LangGraph `StateGraph` is compiled in `agent/graph.py`. All nodes share a single `AgentState` TypedDict (`agent/state.py`). Conditional routing reads `state["next"]` — the supervisor writes this field to direct the graph at each step.
+- `supervisor` — decomposes query, sets `state["next"]`
+- `researcher` — RAG + Tavily search, populates `state["retrieved_docs"]`
+- `writer` — assembles cited report from retrieved docs
+- `critic` — scores quality; routes back to researcher if score < threshold
 
-**Node flow:**
-```
-supervisor → researcher → writer → critic → (END or back to researcher)
-```
+Graph compiled in `agent/graph.py`. State in `agent/state.py`. Nodes in `agent/nodes.py`. Tools in `agent/tools.py`. Prompts in `prompts/templates.py`. Pinecone singleton in `vectorstore/client.py`.
 
-- `supervisor` — decomposes the query, sets `state["next"]`
-- `researcher` — runs RAG retrieval + Tavily web search, populates `state["retrieved_docs"]`
-- `writer` — assembles retrieved context into a cited report
-- `critic` — scores output quality; routes back to researcher if score < threshold
+RAG is split: `rag/ingest.py` (offline, writes to Pinecone) and `rag/retriever.py` (online, reads per request). Chunking: `chunk_size=512`, `chunk_overlap=64`.
 
-Node functions live in `agent/nodes.py`. Tool definitions decorated with `@tool` are in `agent/tools.py`. System prompt constants per node are in `prompts/templates.py`.
+## Teaching reference
 
-### RAG pipeline (`rag/`)
+**Reference repo:** `/Users/havanthien/AI Agentic Learning/agents/`
 
-Ingestion and retrieval are fully decoupled — `ingest.py` runs independently; `retriever.py` only reads. Chunking uses `RecursiveCharacterTextSplitter` with `chunk_size=512`, `chunk_overlap=64`. Chunks carry source path and page number metadata for citations.
+When the user asks for step-by-step explanations, always point to the specific reference file and section first, explain the concept, then let the user write.
 
-### API (`api/`)
-
-FastAPI app and streaming `/chat` endpoint in `api/routes.py`. Pydantic request/response models in `api/schemas.py`. Docs available at `http://localhost:8000/docs`.
-
-### Vector store (`vectorstore/`)
-
-`vectorstore/client.py` holds the Pinecone client singleton. Used by both `rag/ingest.py` and `rag/retriever.py`.
-
-### MCP (`mcp/config.json`)
-
-Declares external MCP server connections (filesystem, Gmail, etc.) used as tools by the agent.
+| File to implement | Reference to read first |
+|---|---|
+| `agent/state.py` ✅ | `4_langgraph/sidekick.py` lines 1–30 |
+| `agent/tools.py` ✅ | `4_langgraph/sidekick_tools.py` (full file) |
+| `agent/nodes.py` ✅ | `4_langgraph/sidekick.py` lines 57–165 |
+| `agent/graph.py` | `4_langgraph/sidekick.py` lines 167–220 + `4_langgraph/4_lab4.ipynb` |
+| `rag/embedder.py` + `rag/retriever.py` | `1_foundations/4_lab4.ipynb` + `2_openai/deep_research/search_agent.py` |
+| `rag/ingest.py` | `1_foundations/4_lab4.ipynb` |
+| `api/schemas.py` + `api/routes.py` | `4_langgraph/app.py` + `2_openai/deep_research/deep_research.py` |
+| `main.py` | `4_langgraph/app.py` |
+| `prompts/templates.py` | `4_langgraph/sidekick.py` lines 35–55 |
