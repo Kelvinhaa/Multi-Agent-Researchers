@@ -1,10 +1,22 @@
-import os
-from rag.embedder import embeddings
-from dotenv import load_dotenv
-from pinecone import Pinecone
+from rag.embedder import TEXT_FIELD, NAMESPACE
+from vectorstore.client import get_index
 
-pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-index = pc.Index(os.getenv("PINECONE_INDEX"))
+def retrieve(query: str, top_k: int = 5) -> list[dict]:
+    index = get_index()
 
-def retrieve(query: str) -> list[dict]
-    vector = embeddings.embed_query(query)
+    response = index.search(
+        namespace=NAMESPACE,
+        top_k=top_k,
+        inputs={"text":query},
+        fields=[TEXT_FIELD, "source"],
+    )
+    
+    return [
+        {
+            "id": hit.id,
+            "score": hit.score,
+            "text": hit.fields[TEXT_FIELD],
+            "source": hit.fields["source"],
+        }
+        for hit in response.result.hits
+    ]
