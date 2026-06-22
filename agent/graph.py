@@ -5,7 +5,7 @@ from agent.nodes import supervisor, researcher, writer, critic
 def route_after_critic(state: AgentState) ->str:
     if state.get("score") and state["score"] >= 0.7:
         return "END"
-    return "reseacher"
+    return "researcher"
 
 def build_graph():
 

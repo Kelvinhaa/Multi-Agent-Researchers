@@ -39,9 +39,11 @@ def supervisor(state: AgentState) -> dict:
 
 def writer(state: AgentState) -> dict:
     prompt = f"""You are a writer agent. You are responsible for writing the report based on the retrieved context.
-              The retrieved context is: {state['retrieved_context']}
-              The report is: {state['report']}
+              The retrieved context is: {state['retrieved_docs']}
               """
+    if state.get("report"):
+        prompt += f"\nPrevious draft: {state['report']}"
+
     response = llm.invoke(prompt)
     return {"report": response.content}
 
