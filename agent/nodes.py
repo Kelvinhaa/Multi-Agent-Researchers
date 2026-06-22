@@ -5,6 +5,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from agent.state import AgentState
 from agent.tools import tools
+from rag.retriever import retrieve
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -21,15 +22,17 @@ llm_with_tools = llm.bind_tools(tools)
 critic_llm = ChatOpenAI(model="gpt-4o-mini").with_structured_output(CriticOutput)
 
 def researcher(state: AgentState) -> dict:
+    docs = retrieve(state["query"])
+
     prompt = f"""You are a researcher agent. You are responsible for retrieving the context based on the user's query.
               The user's query is: {state['query']}
-              The retrieved docs are: {state['retrieved_docs']}
+              The retrieved docs are: {docs}
               """
     if state.get("feedback"):
         prompt += f"\nPrevious attempt was rejected. Feedback: {state['feedback']}"
 
     response = llm_with_tools.invoke(prompt)
-    return {"messages": [response]}
+    return {"retrieved_docs": docs, "messages": [response]}
 
 def supervisor(state: AgentState) -> dict:
     prompt = """You are a supervisor agent. You are responsible for decomposing the user's query into sub-tasks and routing the agent to the appropriate node.
