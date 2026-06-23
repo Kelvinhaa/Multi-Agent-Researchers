@@ -28,7 +28,7 @@ TAVILY_API_KEY=...
 APP_ENV=development
 ```
 
-Pinecone index must be created with dimension `1536` (matching `text-embedding-3-small`) and cosine similarity.
+Pinecone index uses integrated inference (embeddings computed server-side by Pinecone), model `llama-text-embed-v2`, dimension `1024`, cosine similarity. See `rag/embedder.py` for the config constants.
 
 ## Architecture
 
@@ -41,7 +41,7 @@ Pinecone index must be created with dimension `1536` (matching `text-embedding-3
 
 Graph compiled in `agent/graph.py`. State in `agent/state.py`. Nodes in `agent/nodes.py`. Tools in `agent/tools.py`. Prompts in `prompts/templates.py`. Pinecone singleton in `vectorstore/client.py`.
 
-RAG is split: `rag/ingest.py` (offline, writes to Pinecone) and `rag/retriever.py` (online, reads per request). Chunking: `chunk_size=512`, `chunk_overlap=64`.
+RAG is split: `rag/ingest.py` (offline, writes to Pinecone) and `rag/retriever.py` (online, reads per request). Chunking: `chunk_size=512`, `chunk_overlap=50`.
 
 ## Teaching reference
 
