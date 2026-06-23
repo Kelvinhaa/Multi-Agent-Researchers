@@ -17,15 +17,32 @@ class CriticOutput(BaseModel):
     score: float = Field(description="0.0 to 1.0")
     should_retry: bool = Field(description="...")
 
+
+# Pydantic model for the supervisor's output
+class SupervisorOutput(BaseModel):
+    sub_queries: list[str] = Field(
+        description="2-4 focused sub-questions that together cover what's needed to answer the user's query"
+    )
+
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
 llm_with_tools = llm.bind_tools(tools)
 critic_llm = ChatOpenAI(model="gpt-4o-mini").with_structured_output(CriticOutput)
+supervisor_llm = ChatOpenAI(model="gpt-4o-mini").with_structured_output(SupervisorOutput)
 
 def researcher(state: AgentState) -> dict:
-    docs = retrieve(state["query"])
+    sub_queries = state.get("sub_queries") or [state["query"]]
+
+    seen_ids = set()
+    docs = []
+    for sub_query in sub_queries:
+        for doc in retrieve(sub_query):
+            if doc["id"] not in seen_ids:
+                seen_ids.add(doc["id"])
+                docs.append(doc)
 
     prompt = f"""You are a researcher agent. You are responsible for retrieving the context based on the user's query.
               The user's query is: {state['query']}
+              It was broken down into these sub-questions: {sub_queries}
               The retrieved docs are: {docs}
               """
     if state.get("feedback"):
@@ -35,10 +52,15 @@ def researcher(state: AgentState) -> dict:
     return {"retrieved_docs": docs, "messages": [response]}
 
 def supervisor(state: AgentState) -> dict:
-    prompt = """You are a supervisor agent. You are responsible for decomposing the user's query into sub-tasks and routing the agent to the appropriate node.
-              You decide what to do first. """
-    
-    return {"next": "researcher"}
+    prompt = f"""You are a supervisor agent. Break the user's query into 2-4 focused,
+              self-contained sub-questions that together cover what's needed to answer it.
+              If the query is already narrow, return a single sub-question (a cleaned-up
+              restatement of the query).
+              The user's query is: {state['query']}
+              """
+
+    result = supervisor_llm.invoke(prompt)
+    return {"sub_queries": result.sub_queries, "next": "researcher"}
 
 def writer(state: AgentState) -> dict:
     prompt = f"""You are a writer agent. You are responsible for writing the report based on the retrieved context.

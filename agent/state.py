@@ -8,6 +8,7 @@ class AgentState(TypedDict):
 
     query: str
     next: Optional[str]
+    sub_queries: Optional[List[str]]
     retrieved_docs: Optional[List[dict]]
     report: Optional[str]
     feedback: Optional[str]
