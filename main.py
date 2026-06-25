@@ -1,14 +1,13 @@
 import os 
+import uvicorn
 from dotenv import load_dotenv
 
 load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-
 
 def main():
-    print("Hello from ai-agent-researcher!")
+    reload = os.getenv("APP_ENV") == "development"
+    uvicorn.run("api.routes:app", host="0.0.0.0", port=8000, reload=reload)
 
 
 if __name__ == "__main__":
