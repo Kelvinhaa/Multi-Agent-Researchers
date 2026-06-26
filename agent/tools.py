@@ -29,11 +29,14 @@ def web_search(query: str) -> str:
         The top results as plain text, one per result, each with its title,
         source URL, and a short content snippet, so the result can be cited.
     """
-    response = client.search(
-        query=query,
-        include_answer="basic",
-        search_depth="advanced",
-    )
+    try:
+        response = client.search(
+            query=query,
+            include_answer="basic",
+            search_depth="basic",
+        )
+    except Exception as e:
+        return f"Web search failed: {e}"
 
     results = response.get("results", [])
     if not results:

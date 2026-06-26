@@ -4,9 +4,16 @@ from agent.tools import tools
 from agent.state import AgentState
 from agent.nodes import supervisor, researcher, writer, critic
 
+# Caps total researcher visits across both the tool-calling loop and the
+# critic-retry loop, since researcher is the chokepoint node common to both.
+# Without this, a low-scoring critic or a tool-happy LLM loops indefinitely.
+MAX_STEPS = 6
+
 
 def route_after_critic(state: AgentState) -> str:
-    if state.get("score") and state["score"] >= 0.7:
+    if state.get("score") is not None and state["score"] >= 0.7:
+        return "END"
+    if state.get("steps", 0) >= MAX_STEPS:
         return "END"
     return "researcher"
 
@@ -14,6 +21,8 @@ def route_after_supervisor(state: AgentState) -> str:
     return state["next"]
 
 def route_after_researcher(state: AgentState) -> str:
+    if state.get("steps", 0) >= MAX_STEPS:
+        return "writer"
     if state["messages"][-1].tool_calls:
         return "tools"
     else:
