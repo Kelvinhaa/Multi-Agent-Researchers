@@ -11,6 +11,7 @@ dependencies = [
     "langchain-openai>=0.3.35",
     "langchain-text-splitters>=0.3.11",
     "langgraph>=0.6.11",
+    "langsmith[openai-agents]>=0.4.37",
     "openai>=2.41.1",
     "pinecone>=7.3.0",
     "python-dotenv>=1.2.1",

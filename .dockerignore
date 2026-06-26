@@ -1,0 +1,9 @@
+.venv
+.git
+__pycache__/
+*.py[oc]
+.env*
+.DS_Store
+.claude
+tests/
+README.md
