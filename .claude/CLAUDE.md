@@ -43,6 +43,8 @@ Graph compiled in `agent/graph.py`. State in `agent/state.py`. Nodes in `agent/n
 
 RAG is split: `rag/ingest.py` (offline, writes to Pinecone) and `rag/retriever.py` (online, reads per request). Chunking: `chunk_size=512`, `chunk_overlap=50`.
 
+Real bugs found/fixed during development (interview reference, not project docs): see `ENGINEERING_LOG.md`.
+
 ## Teaching reference
 
 **Reference repo:** `/Users/havanthien/AI Agentic Learning/agents/`
