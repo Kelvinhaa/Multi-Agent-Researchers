@@ -1,0 +1,92 @@
+[
+  {
+    "query": "What does it mean for an event to have probability 0 or probability 1?",
+    "expected_sources": ["probability_basics"],
+    "reference_answer": "Probability is a measure between 0 and 1 of how likely an event is to occur. An event with probability 0 cannot happen; an event with probability 1 is certain."
+  },
+  {
+    "query": "What are Kolmogorov's three axioms of probability?",
+    "expected_sources": ["probability_basics"],
+    "reference_answer": "1) P(A) >= 0 for any event A. 2) P(S) = 1, where S is the sample space of all possible outcomes. 3) For mutually exclusive events A and B, P(A union B) = P(A) + P(B)."
+  },
+  {
+    "query": "How do you calculate the probability of A given that B has already happened?",
+    "expected_sources": ["probability_basics"],
+    "reference_answer": "The conditional probability of A given B is P(A|B) = P(A and B) / P(B), provided P(B) > 0."
+  },
+  {
+    "query": "What does it mean for two events to be independent?",
+    "expected_sources": ["probability_basics"],
+    "reference_answer": "Two events A and B are independent if P(A and B) = P(A) * P(B), equivalently P(A|B) = P(A) — knowing B occurred gives no information about A."
+  },
+  {
+    "query": "What is Bayes' theorem used for?",
+    "expected_sources": ["probability_basics"],
+    "reference_answer": "Bayes' theorem, P(A|B) = P(B|A) * P(A) / P(B), is used to update a prior belief P(A) into a posterior belief P(A|B) after observing evidence B."
+  },
+  {
+    "query": "How is the expected value of a discrete random variable calculated?",
+    "expected_sources": ["probability_basics"],
+    "reference_answer": "The expected value of a discrete random variable X is E[X], the sum of x * P(X = x) over all possible values x — a probability-weighted average."
+  },
+  {
+    "query": "What technologies make up this project's tech stack?",
+    "expected_sources": ["README"],
+    "reference_answer": "LangGraph for agent orchestration, OpenAI GPT-4o as the LLM, a RAG pipeline over Pinecone for retrieval with OpenAI text-embedding-3-small embeddings, the Tavily API for web search, MCP for external tools, FastAPI plus uvicorn as the API server, uv as the package manager, on Python 3.12."
+  },
+  {
+    "query": "What chunking strategy does the RAG pipeline use, according to the project README?",
+    "expected_sources": ["README"],
+    "reference_answer": "The README states the RAG pipeline uses RecursiveCharacterTextSplitter with chunk_size=512 and chunk_overlap=64, with chunks labelled by source path and page number in metadata."
+  },
+  {
+    "query": "What does the supervisor agent do in the overall agent architecture?",
+    "expected_sources": ["README"],
+    "reference_answer": "The supervisor decomposes the user's query and sets the routing decision in state[\"next\"], directing the graph to the researcher node next."
+  },
+  {
+    "query": "How is this project packaged for deployment?",
+    "expected_sources": ["README"],
+    "reference_answer": "The project is containerised with Docker; the image targets Python 3.12-slim and copies only the application source to keep the image small. In production, APP_ENV is set to production and secrets are mounted via the cloud provider's secret manager rather than a .env file."
+  },
+  {
+    "query": "What API keys do you need before setting up this project?",
+    "expected_sources": ["README"],
+    "reference_answer": "You need an OpenAI API key, a Pinecone API key, and a Tavily API key, plus uv installed locally."
+  },
+  {
+    "query": "How do you ingest a new document into the knowledge base at runtime, per the README?",
+    "expected_sources": ["README"],
+    "reference_answer": "The README documents a POST request to the /ingest endpoint with a file upload, e.g. curl -X POST http://localhost:8000/ingest -F \"file=@path/to/document.pdf\"."
+  },
+  {
+    "query": "Why could requests hang indefinitely, and how was it fixed?",
+    "expected_sources": ["ENGINEERING_LOG"],
+    "reference_answer": "Two nested unbounded loops existed (critic-to-researcher retry, and researcher-to-tools tool-calling). LangGraph's actual default recursion limit turned out to be 10,007, not the commonly-cited 25, so it gave no practical protection. The fix added a single steps counter, incremented once per researcher visit, checked by both routing functions and capped at MAX_STEPS=6."
+  },
+  {
+    "query": "What used to happen when the Tavily web search tool hit a network error?",
+    "expected_sources": ["ENGINEERING_LOG"],
+    "reference_answer": "The web_search tool had zero error handling, so any exception propagated and crashed the entire LangGraph run with no response sent at all. The fix wrapped the Tavily call in a try/except and returned an error string to the LLM instead of raising."
+  },
+  {
+    "query": "Why was the researcher node making redundant Pinecone calls on every loop iteration?",
+    "expected_sources": ["ENGINEERING_LOG"],
+    "reference_answer": "The researcher node re-ran RAG retrieval for every sub-query on every visit, even though the queries never changed between loop iterations. The fix was to skip retrieval once retrieved_docs was already populated."
+  },
+  {
+    "query": "Why did live web search results never show up in the final written report?",
+    "expected_sources": ["ENGINEERING_LOG"],
+    "reference_answer": "The researcher's LLM call sent a fresh prompt string each time instead of the actual message history, so it never saw its own prior tool results; separately, the writer only ever read retrieved_docs and never the message history, so Tavily results were structurally discarded. The fix passed full message history into the researcher's LLM call and extracted ToolMessage content directly into the writer's prompt."
+  },
+  {
+    "query": "What quoting bug was discovered while adding LangSmith observability?",
+    "expected_sources": ["ENGINEERING_LOG"],
+    "reference_answer": "Docker's --env-file parser doesn't strip quotes the way python-dotenv or a shell would, so setting LANGSMITH_PROJECT=\"Multi-Agent Research\" baked literal quote characters into the actual project name."
+  },
+  {
+    "query": "How does retrieval work in this project?",
+    "expected_sources": ["README", "ENGINEERING_LOG"],
+    "reference_answer": "Per the README, retrieval is a semantic similarity search using the embedded user query against the Pinecone index, returning top-k results with source metadata. The engineering log separately notes a bug where the researcher node re-ran this retrieval redundantly on every loop visit even though the underlying queries hadn't changed, which was fixed by skipping retrieval once results were already populated."
+  }
+]
