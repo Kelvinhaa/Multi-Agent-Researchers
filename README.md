@@ -6,8 +6,8 @@ An autonomous multi-agent research assistant that decomposes a query into sub-ta
 
 ## How it works
 
-A supervisor agent receives the user's query and breaks it into sub-tasks. Worker agents retrieve context from the internal knowledge base (via RAG) and the live web (via Tavily). A synthesis agent assembles the retrieved context into a structured report. A critique agent checks the output for gaps and triggers a re-search loop if confidence is low. The final answer streams back to the client token by token.
-
+A supervisor agent receives the user's query and breaks it into sub-tasks. Worker agents retrieve context from the internal knowledge base (via RAG with Hybrid Search BM25 + Semantic Search) and the live web (via Tavily). A synthesis agent assembles the retrieved context into a structured report. A critique agent checks the output for gaps and triggers a re-search loop if confidence is low. The final answer streams back to the client token by token.
+Evaluation metrics are also used to determine the model's accuracy, faithfullness and Ragas.
 ```
 User query
     └── Supervisor (decomposes + routes)
