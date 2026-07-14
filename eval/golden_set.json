@@ -32,12 +32,12 @@
   {
     "query": "What technologies make up this project's tech stack?",
     "expected_sources": ["README"],
-    "reference_answer": "LangGraph for agent orchestration, OpenAI GPT-4o as the LLM, a RAG pipeline over Pinecone for retrieval with OpenAI text-embedding-3-small embeddings, the Tavily API for web search, MCP for external tools, FastAPI plus uvicorn as the API server, uv as the package manager, on Python 3.12."
+    "reference_answer": "LangGraph 0.6.x for agent orchestration, OpenAI gpt-4o-mini as the LLM, a RAG pipeline over Pinecone for retrieval using Pinecone's integrated inference (llama-text-embed-v2, computed server-side rather than via a separate OpenAI embeddings call), the Tavily API for web search, FastAPI plus uvicorn as the API server, uv as the package manager, on Python 3.12."
   },
   {
     "query": "What chunking strategy does the RAG pipeline use, according to the project README?",
     "expected_sources": ["README"],
-    "reference_answer": "The README states the RAG pipeline uses RecursiveCharacterTextSplitter with chunk_size=512 and chunk_overlap=64, with chunks labelled by source path and page number in metadata."
+    "reference_answer": "The README states the RAG pipeline uses RecursiveCharacterTextSplitter with chunk_size=512 and chunk_overlap=50, with each chunk labelled by its source filename in metadata."
   },
   {
     "query": "What does the supervisor agent do in the overall agent architecture?",

@@ -6,8 +6,10 @@ An autonomous multi-agent research assistant that decomposes a query into sub-ta
 
 ## How it works
 
-A supervisor agent receives the user's query and breaks it into sub-tasks. Worker agents retrieve context from the internal knowledge base (via RAG with Hybrid Search BM25 + Semantic Search) and the live web (via Tavily). A synthesis agent assembles the retrieved context into a structured report. A critique agent checks the output for gaps and triggers a re-search loop if confidence is low. The final answer streams back to the client token by token.
-Evaluation metrics are also used to determine the model's accuracy, faithfullness and Ragas.
+A supervisor agent receives the user's query and breaks it into sub-tasks. Worker agents retrieve context from the internal knowledge base (via RAG) and the live web (via Tavily). A synthesis agent assembles the retrieved context into a structured report. A critique agent checks the output for gaps and triggers a re-search loop if confidence is low. The final answer streams back to the client token by token.
+
+> **Roadmap:** retrieval is currently pure semantic (dense vector) search. Hybrid search (BM25 + semantic) is planned but not yet implemented.
+
 ```
 User query
     └── Supervisor (decomposes + routes)
@@ -22,12 +24,11 @@ User query
 
 | Layer | Technology |
 |---|---|
-| Agent orchestration | LangGraph 0.2.x |
-| LLM | OpenAI GPT-4o via OpenAI SDK |
+| Agent orchestration | LangGraph 0.6.x |
+| LLM | OpenAI gpt-4o-mini via OpenAI SDK |
 | Retrieval | RAG over Pinecone vector DB |
-| Embeddings | OpenAI text-embedding-3-small |
-| Web search | Tavily API |
-| External tools | Model Context Protocol (MCP) |
+| Embeddings | Pinecone integrated inference, `llama-text-embed-v2` (computed server-side, not a separate OpenAI call) |
+| Web search | Tavily API (via a plain LangChain `@tool`, not MCP) |
 | API server | FastAPI + uvicorn |
 | Package manager | uv |
 | Python | 3.12 |
@@ -53,28 +54,32 @@ ai-agent-researcher/
 │
 ├── rag/
 │   ├── __init__.py
-│   ├── ingest.py            # Load documents, chunk, embed, upsert to Pinecone
-│   ├── embedder.py          # Wrapper around OpenAI embeddings API
-│   └── retriever.py         # Semantic search against the vector index
+│   ├── ingest.py            # Load documents, chunk, upsert to Pinecone (offline)
+│   ├── embedder.py          # Shared config constants (model, field names, namespace)
+│   └── retriever.py         # Semantic search against the vector index (online)
 │
 ├── vectorstore/
 │   ├── __init__.py
-│   └── client.py            # Pinecone client singleton
+│   └── client.py            # Pinecone client singleton, auto-creates the index
 │
 ├── api/
 │   ├── __init__.py
-│   ├── routes.py            # FastAPI app and streaming /chat endpoint
-│   └── schemas.py           # Pydantic request/response models
+│   ├── routes.py            # FastAPI app: /research and /research/stream endpoints
+│   ├── schemas.py           # Pydantic request/response models
+│   └── streaming.py         # SSE event generator for /research/stream
 │
-├── prompts/
+├── eval/
 │   ├── __init__.py
-│   └── templates.py         # System prompt constants per agent node
-│
-├── mcp/
-│   └── config.json          # MCP server declarations (filesystem, Gmail, etc.)
+│   ├── golden_set.json      # Hand-curated query/expected_sources/reference_answer set
+│   ├── metrics.py           # recall@k, MRR (in progress)
+│   └── run.py                # Eval suite CLI entry point (in progress)
 │
 └── tests/
-    └── test_agent.py        # Integration tests for the compiled graph
+    ├── test_graph.py
+    ├── test_ingest.py
+    ├── test_nodes.py
+    ├── test_retriever.py
+    └── test_routes.py
 ```
 
 ---
@@ -116,14 +121,14 @@ Open `.env` and fill in your keys:
 ```env
 OPENAI_API_KEY=sk-...
 PINECONE_API_KEY=...
-PINECONE_INDEX=research-agent
+PINECONE_INDEX=llama-text-embed-v2-index
 TAVILY_API_KEY=...
 APP_ENV=development
 ```
 
-**4. Create your Pinecone index**
+**4. Index creation is automatic**
 
-Create a Pinecone index named `research-agent` with dimension `1536` (matching `text-embedding-3-small`) and cosine similarity metric.
+`vectorstore/client.py`'s `ensure_index()` creates the index on first use via Pinecone integrated inference (`llama-text-embed-v2`, dimension 1024, cosine similarity) if it doesn't already exist — no manual console step needed.
 
 **5. Ingest your knowledge base** (optional — skip to use web search only)
 
@@ -148,27 +153,22 @@ The API is now available at `http://localhost:8000`. Interactive docs at `http:/
 **Send a research query**
 
 ```bash
-curl -X POST http://localhost:8000/chat \
+curl -X POST http://localhost:8000/research \
   -H "Content-Type: application/json" \
-  -d '{"message": "What are the latest advances in long-context LLMs?"}'
+  -d '{"query": "What are the latest advances in long-context LLMs?"}'
 ```
 
 **Stream the response**
 
 ```bash
-curl -X POST http://localhost:8000/chat \
+curl -X POST http://localhost:8000/research/stream \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
-  -d '{"message": "Compare transformer and state space model architectures"}' \
+  -d '{"query": "Compare transformer and state space model architectures"}' \
   --no-buffer
 ```
 
-**Ingest a new document at runtime**
-
-```bash
-curl -X POST http://localhost:8000/ingest \
-  -F "file=@path/to/document.pdf"
-```
+There is no runtime document-upload endpoint — ingestion is the offline `python -m rag.ingest <docs_dir>` step above.
 
 
 ## Agent architecture
@@ -192,9 +192,27 @@ Conditional routing is handled by a single `route()` function that reads `state[
 
 Ingestion and retrieval are fully decoupled. Run `ingest.py` independently on a schedule or on demand; the agent's `retriever.py` only ever reads from the index.
 
-**Chunking strategy:** `RecursiveCharacterTextSplitter` with `chunk_size=512` and `chunk_overlap=64`. Chunks are labelled with source path and page number in metadata so the writer node can cite them accurately.
+**Chunking strategy:** `RecursiveCharacterTextSplitter` with `chunk_size=512` and `chunk_overlap=50`. Each chunk is labelled with its source filename in metadata so the writer node can cite it.
 
 **Retrieval:** Semantic similarity search using the embedded user query against the Pinecone index. Top-k results are returned with source metadata and passed directly into the writer node's context window.
+
+---
+
+## Evaluation (in progress)
+
+`eval/` holds a quality-evaluation suite, separate from the unit-tested `tests/` suite since it needs live Pinecone + live OpenAI calls:
+
+- `eval/golden_set.json` — hand-curated queries with expected source documents and reference answers.
+- `eval/metrics.py` — retrieval-only metrics (`recall@k`, MRR) graded against `golden_set.json`.
+- `eval/run.py` — runs both a retrieval-only pass and a full end-to-end pass (via RAGAS: faithfulness, answer relevancy, context precision) against the live agent graph.
+
+Once finished, run with:
+
+```bash
+PYTHONPATH=. uv run python -m eval.run
+```
+
+See `docs/superpowers/specs/2026-06-29-rag-eval-design.md` for the full design.
 
 ---
 
