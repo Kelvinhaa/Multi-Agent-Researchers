@@ -263,18 +263,18 @@ const $ = id => document.getElementById(id);
 const EVAL = {
   golden_set_n: 18, corpus_docs: 3, corpus_chunks: 34,
   metrics: [
-    ["recall@5", 1.00], ["MRR", 1.00], ["retrieval p50", 1046, "ms"],
+    ["recall@5", 1.00], ["MRR", 1.00],
     ["faithfulness", null], ["answer relevancy", null], ["context precision", null]
   ]
 };
 
 function renderEval(){
-  $("eval").innerHTML = EVAL.metrics.map(([name, val, unit]) => {
+  $("eval").innerHTML = EVAL.metrics.map(([name, val]) => {
     if (val === null) return `<div class="metric"><div class="row">
       <span class="name">${name}</span><span class="val pending">pending</span></div>
       <div class="bar pending"><i></i></div></div>`;
-    const pct = unit === "ms" ? 100 : Math.round(val * 100);
-    const shown = unit === "ms" ? `${val}${unit}` : val.toFixed(2);
+    const pct = Math.round(val * 100);
+    const shown = val.toFixed(2);
     return `<div class="metric"><div class="row">
       <span class="name">${name}</span><span class="val">${shown}</span></div>
       <div class="bar"><i data-w="${pct}"></i></div></div>`;
