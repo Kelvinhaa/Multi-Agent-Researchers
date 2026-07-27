@@ -91,6 +91,17 @@ def test_research_stream_happy_path_streams_tokens_then_sources_and_done():
             "data": {"docs": 1, "web_search": False, "step": None},
         },
         {
+            "type": "sources",
+            "sources": [
+                {
+                    "id": "doc1-0",
+                    "score": 0.92,
+                    "text": "alpha content",
+                    "source": "doc1",
+                }
+            ],
+        },
+        {
             "type": "stage",
             "node": "critic",
             "data": {"score": 0.9, "passed": True, "feedback": "Looks good"},
@@ -224,6 +235,26 @@ def test_researcher_stage_reports_no_web_search_when_message_has_no_tool_calls()
     assert events[0]["data"] == {"docs": 0, "web_search": False, "step": 2}
 
 
+def test_stream_emits_sources_as_soon_as_the_researcher_finishes():
+    """Sources used to arrive only in the final event, so the UI showed an
+    empty 'retrieving' panel for the whole run even after chunks were in."""
+    docs = [{"id": "d0", "score": 0.9, "text": "x", "source": "doc1"}]
+    fake_events = [
+        ("updates", {"researcher": {"retrieved_docs": docs, "steps": 1}}),
+        ("messages", (SimpleNamespace(content="tok"), {"langgraph_node": "writer"})),
+    ]
+
+    with patch.object(graph, "astream", new=make_fake_astream(fake_events)):
+        client = TestClient(app)
+        response = client.post("/research/stream", json={"query": "what is alpha?"})
+
+    events = parse_sse_events(response.text)
+    # a sources event lands before the first token, not just at the end
+    first_token = next(i for i, e in enumerate(events) if e["type"] == "token")
+    early = [e for e in events[:first_token] if e["type"] == "sources"]
+    assert early == [{"type": "sources", "sources": docs}]
+
+
 def test_stream_emits_tools_stage_with_result_count():
     fake_events = [
         ("updates", {"tools": {"messages": [SimpleNamespace(content="r1")]}}),
@@ -321,6 +352,10 @@ def test_research_stream_emits_retry_event_when_critic_rejects():
             "type": "stage",
             "node": "researcher",
             "data": {"docs": 1, "web_search": False, "step": None},
+        },
+        {
+            "type": "sources",
+            "sources": [{"id": "doc1-0", "score": 0.9, "text": "x", "source": "doc1"}],
         },
         {
             "type": "stage",

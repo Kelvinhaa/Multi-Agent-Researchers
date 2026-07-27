@@ -45,9 +45,12 @@ async def stream_research_events(query: str) -> AsyncIterator[str]:
             if "researcher" in payload:
                 update = payload["researcher"]
                 yield format_stage("researcher", _researcher_stage_data(update))
-                latest_retrieved_docs = (
-                    update.get("retrieved_docs") or latest_retrieved_docs
-                )
+                docs = update.get("retrieved_docs")
+                if docs:
+                    # Publish chunks the moment they exist rather than holding
+                    # them until the run ends, so the UI can fill in mid-run.
+                    latest_retrieved_docs = docs
+                    yield format_sse({"type": "sources", "sources": docs})
 
             if "tools" in payload:
                 results = payload["tools"].get("messages") or []

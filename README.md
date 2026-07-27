@@ -4,6 +4,23 @@ An autonomous multi-agent research assistant that decomposes a query into sub-ta
 
 ---
 
+## Demo
+
+![The LangGraph pipeline executing a real query, node by node](docs/demo.gif)
+
+A real run, unedited. Each node advances from pending to running to done off the live SSE
+stream, reporting what it actually did — sub-queries decomposed, chunks retrieved, tokens
+streamed, and the critic's score. The dimmed edge beneath the graph is the re-search loop,
+which lights up when the critic scores below `0.70`.
+
+Start it locally and open <http://localhost:8000>:
+
+```bash
+PYTHONPATH=. uv run uvicorn api.routes:app --reload
+```
+
+---
+
 ## How it works
 
 A supervisor agent receives the user's query and breaks it into sub-tasks. Worker agents retrieve context from the internal knowledge base (via RAG) and the live web (via Tavily). A synthesis agent assembles the retrieved context into a structured report. A critique agent checks the output for gaps and triggers a re-search loop if confidence is low. The final answer streams back to the client token by token.

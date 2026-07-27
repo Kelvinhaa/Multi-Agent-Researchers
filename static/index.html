@@ -66,7 +66,12 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
 /* ── graph strip ─────────────────────────────────────────────────── */
 .graph-sec{padding:20px 24px 10px;border-bottom:1px solid var(--n900)}
 .graph-hd{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
-.graph-scroll{overflow-x:auto;overflow-y:hidden;padding-bottom:6px}
+.graph-scroll{overflow-x:auto;overflow-y:hidden;padding-bottom:6px;
+  scrollbar-width:thin;scrollbar-color:var(--n800) transparent}
+.graph-scroll::-webkit-scrollbar{height:7px}
+.graph-scroll::-webkit-scrollbar-track{background:transparent}
+.graph-scroll::-webkit-scrollbar-thumb{background:var(--n800);border-radius:4px}
+.graph-scroll::-webkit-scrollbar-thumb:hover{background:var(--n700)}
 .graph{position:relative;width:1232px;height:214px}
 .graph svg{position:absolute;inset:0}
 .node{position:absolute;box-sizing:border-box;padding:10px 12px;background:var(--surface);
