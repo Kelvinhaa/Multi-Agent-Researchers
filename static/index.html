@@ -385,7 +385,10 @@ function onEvent(ev){
         + (d.web_search ? " · web ✓" : ""));
       setActive(d.web_search ? "tools" : "writer");
     } else if (ev.node === "tools") {
-      setDone("tools", `${d.results} result${d.results === 1 ? "" : "s"}`);
+      // The tools card is a short two-line box with no .t slot, so its
+      // elapsed time rides along in the detail line.
+      const at = secs(performance.now() - st.t0);
+      setDone("tools", `${d.results} result${d.results === 1 ? "" : "s"} · ${at}`);
       setActive("researcher");
     } else if (ev.node === "writer") {
       setDone("writer", `${st.tokens} tok streamed`);
