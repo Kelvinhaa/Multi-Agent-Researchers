@@ -431,7 +431,14 @@ function onEvent(ev){
       + ((st.visits.writer || 0) === 1 ? "" : "es");
     $("reportMeta").textContent = st.scores.length
       ? `${st.tokens} tok · critic ${st.scores[st.scores.length-1].toFixed(2)}` : "";
-    NODES.forEach(n => el(n).classList.remove("active"));
+    // A capped run ends right after a retry, leaving the researcher marked
+    // active for a visit that never happens. Settle on what actually ran:
+    // visited nodes are done, untouched ones stay pending.
+    NODES.forEach(k => {
+      const e = el(k);
+      e.classList.remove("active");
+      if (st.visits[k]) e.classList.add("done");
+    });
   }
 }
 
