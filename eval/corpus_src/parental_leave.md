@@ -27,8 +27,8 @@ do not apply until that milestone is reached.
 Employees who are the primary carer of a newborn or newly placed child receive
 18 weeks of parental leave at full pay. Employees who are the secondary carer
 receive 6 weeks of parental leave at full pay. Both entitlements may be taken
-in a single continuous block or, with manager agreement, split into two blocks
-within the first 12 months after birth or placement.
+in a single continuous block or, with manager agreement, split into two
+separate blocks around the birth or placement.
 
 | Role | Paid leave |
 |---|---|
@@ -46,5 +46,5 @@ extended period of unpaid leave.
 ## Returning to work
 
 Employees returning from parental leave are entitled to return to their
-previous role, or a comparable role at the same level and pay, and may request
-a phased return over the first four weeks back.
+previous role, or a comparable role at the same level and pay, and may agree
+a phased return with their manager.
