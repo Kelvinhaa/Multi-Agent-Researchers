@@ -1,4 +1,5 @@
 import argparse
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -42,21 +43,32 @@ def read_document(path: Path) -> str:
 
     PDFs go through pdfplumber rather than pypdf: pypdf flattens tables into
     scrambled text, which would silently corrupt retrieved context.
+
+    Ingest runs unattended over a growing corpus, so a single malformed PDF
+    must not abort the whole batch. If pdfplumber can't open or read the
+    file, the failure is reported to stderr with the offending path and an
+    empty string is returned — the document contributes zero chunks and is
+    effectively skipped, rather than the run dying with an uncaught
+    low-level pdfminer/pdfplumber exception.
     """
     if path.suffix.lower() != ".pdf":
         return path.read_text(encoding="utf-8")
 
     parts: list[str] = []
-    with pdfplumber.open(path) as pdf:
-        for page in pdf.pages:
-            text = page.extract_text() or ""
-            if text:
-                parts.append(text)
-            for table in page.extract_tables() or []:
-                for row in table:
-                    cells = [c.strip() for c in row if c and c.strip()]
-                    if cells:
-                        parts.append(" | ".join(cells))
+    try:
+        with pdfplumber.open(path) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text() or ""
+                if text:
+                    parts.append(text)
+                for table in page.extract_tables() or []:
+                    for row in table:
+                        cells = [c.strip() for c in row if c and c.strip()]
+                        if cells:
+                            parts.append(" | ".join(cells))
+    except Exception as exc:
+        print(f"Skipping unreadable PDF {path}: {exc}", file=sys.stderr)
+        return ""
 
     return "\n".join(parts)
 

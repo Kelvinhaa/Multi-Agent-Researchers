@@ -131,3 +131,48 @@ def test_ingest_path_ingests_pdfs(tmp_path):
     assert total >= 1
     records = fake_index.upsert_records.call_args.kwargs["records"]
     assert records[0]["source"] == "travel_policy"
+
+
+def test_read_document_extracts_table_cells_from_pdf(tmp_path):
+    pdf = _write_pdf(
+        tmp_path,
+        "sla_policy",
+        "## SLA Tiers\n\n"
+        "| Tier | Response Time |\n"
+        "|---|---|\n"
+        "| Gold | 2 hours |\n"
+        "| Silver | 8 hours |\n",
+    )
+
+    text = read_document(pdf)
+
+    # " | "-joined cell text only comes from the extract_tables() branch —
+    # extract_text() alone would never insert that separator between cells.
+    # A scrambled join (wrong row, swapped columns, dropped cell) fails this.
+    assert "Gold | 2 hours" in text
+    assert "Silver | 8 hours" in text
+
+
+def test_read_document_skips_unreadable_pdf_without_raising(tmp_path, capsys):
+    corrupt = tmp_path / "corrupt.pdf"
+    corrupt.write_bytes(b"%PDF-1.4 this is not a real pdf body" * 5)
+
+    text = read_document(corrupt)
+
+    assert text == ""
+    stderr = capsys.readouterr().err
+    assert "corrupt.pdf" in stderr
+
+
+def test_ingest_path_skips_corrupt_pdf_and_completes(tmp_path):
+    (tmp_path / "good.md").write_text("alpha content")
+    (tmp_path / "corrupt.pdf").write_bytes(b"%PDF-1.4 this is not a real pdf body" * 5)
+    fake_index = MagicMock()
+
+    with patch("rag.ingest.ensure_index", return_value=fake_index):
+        total = ingest_path(str(tmp_path))
+
+    # The corrupt PDF contributes zero chunks and does not abort the run —
+    # only the one valid document's chunk gets upserted.
+    assert total == 1
+    assert fake_index.upsert_records.call_count == 1
