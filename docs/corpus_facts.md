@@ -17,22 +17,28 @@ HQ Melbourne; offices Sydney, Perth, Auckland. 340 staff.
 | Leave request notice | 10 business days for 5+ consecutive days | leave_policy |
 | Leave balance cap | 40 days, excess forfeited each 30 June | leave_policy |
 | Leave request response | 5 business days | leave_policy |
-| Medical certificate required | 3+ consecutive days of personal/carer's leave | leave_policy |
+| Medical certificate required | 3+ consecutive days, or any absence immediately before/after a public holiday | leave_policy |
 | Parental leave, primary carer | 18 weeks at full pay | parental_leave |
 | Parental leave, secondary carer | 6 weeks at full pay | parental_leave |
 | Parental leave eligibility | 12 months continuous service | parental_leave |
 | Parental leave, superannuation | Paid on unpaid portion for up to 12 months | parental_leave |
+| Parental leave split | May be split into up to 2 blocks with manager agreement | parental_leave |
+| Parental leave, return to role | Same role, or a comparable role at the same level and pay | parental_leave |
 | Remote days | Up to 3 days per week | remote_work |
 | Core hours | 10:00–15:00 AEST | remote_work |
 | Fully remote | Requires Executive Leadership Team approval | remote_work |
 | Home office allowance | $650 once per 24 months | remote_work |
 | Review cycle | Twice yearly, March and September | performance_review |
 | Promotion nominations close | 14 February and 14 August | performance_review |
+| Late promotion nomination | Held over to the following cycle | performance_review |
 | Rating scale | 1–5, where 3 is "meets expectations" | performance_review |
+| Rating consequence, 1-2 | Triggers a support plan agreed with the manager | performance_review |
+| Rating consequence, 4-5 | Required to be considered for promotion that cycle | performance_review |
 | Calibration | Panel of 3 department heads | performance_review |
 | Gift declaration threshold | $200 | code_of_conduct |
 | Conflict declaration window | 5 business days | code_of_conduct |
 | Secondary employment | Written approval required | code_of_conduct |
+| Non-retaliation protection | Reports handled confidentially; no retaliation against the reporter | code_of_conduct |
 
 ## Finance
 
