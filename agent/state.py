@@ -14,5 +14,3 @@ class AgentState(TypedDict):
     feedback: Optional[str]
     score: Optional[float]
     steps: Optional[int]
-    
-
