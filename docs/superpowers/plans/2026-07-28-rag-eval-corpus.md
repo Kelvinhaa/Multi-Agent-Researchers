@@ -4,7 +4,7 @@
 
 **Goal:** Produce the project's first real RAG quality numbers by building a 20-document synthetic corpus, ingesting it, and scoring both retrieval and end-to-end answer quality.
 
-**Architecture:** Corpus content is authored as markdown under `eval/corpus_src/`, rendered to realistic PDFs in `docs/corpus/` by a one-shot generator, and ingested through an extended `rag/ingest.py`. The eval splits into pure retrieval metrics (`eval/metrics.py`), LLM-judged answer metrics (`eval/judges.py`), and a CLI orchestrator (`eval/run.py`) that runs both passes against `eval/golden_set.json`.
+**Architecture:** Corpus content is authored as markdown under `eval/corpus_src/`, rendered to realistic PDFs in `docs/corpus/` by a one-shot generator, and ingested through an extended `rag/ingest.py`. The eval splits into pure retrieval metrics (`eval/metrics.py`), LLM-judged answer metrics (`eval/judges.py`), and a CLI orchestrator (`eval/run.py`) that runs both passes against `eval/golden_set.json` and records steps, latency, and cost per run alongside quality.
 
 **Tech Stack:** Python 3.12, `reportlab` (PDF generation), `pdfplumber` (PDF extraction), `langchain-openai` (judge LLM + embeddings), Pinecone integrated inference, pytest.
 
@@ -1527,16 +1527,69 @@ git commit -m "feat: hand-roll the answer-quality judges and drop ragas"
 - Create: `eval/run.py`
 - Test: `tests/test_eval_metrics.py` (append)
 
+Alongside quality, this captures the three operational numbers: **steps used, latency, and cost per run**. All three ride along on the `graph.ainvoke` call already being made.
+
 **Interfaces:**
 - Consumes: `eval.metrics.{hit_rate_at_k, recall_at_k, mrr}`, `eval.judges.{score_faithfulness, score_answer_relevancy, score_context_precision, score_abstention}`, `rag.retriever.retrieve`, `agent.graph.graph`.
-- Produces: `aggregate(records: list[dict]) -> dict`, `async evaluate_item(item: dict, semaphore) -> dict`, `async main() -> int`.
+- Produces: `token_cost(usage: dict) -> float`, `aggregate(records: list[dict]) -> dict`, `async evaluate_item(item: dict, semaphore) -> dict`, `async main() -> int`.
+
+**Two traps this task has to avoid:**
+
+1. `UsageMetadataCallbackHandler.usage_metadata` is keyed by the **dated** model ID — `gpt-4o-mini-2024-07-18`, not `gpt-4o-mini`. That string starts with *both* `gpt-4o` and `gpt-4o-mini`, so a naive `startswith` price lookup silently bills mini traffic at 16× the real rate. `token_cost` matches by **longest** prefix, and there is a test for exactly this.
+2. Latency measured under `Semaphore(4)` is contended and not comparable to a single-run figure. This repo has already dropped one latency metric for being unreproducible (commit `cc2f600`). So the concurrency setting is recorded in every report, and `--sequential` exists for clean numbers.
 
 - [ ] **Step 1: Write the failing aggregation tests**
 
 Append to `tests/test_eval_metrics.py`:
 
 ```python
-from eval.run import aggregate
+from eval.run import aggregate, token_cost
+
+
+def test_token_cost_prices_mini_by_longest_prefix_not_gpt_4o():
+    # "gpt-4o-mini-2024-07-18" startswith BOTH "gpt-4o" and "gpt-4o-mini".
+    # Matching the shorter prefix would bill mini traffic at the gpt-4o rate.
+    usage = {"gpt-4o-mini-2024-07-18": {"input_tokens": 1_000_000, "output_tokens": 0}}
+
+    assert token_cost(usage) == 0.15
+
+
+def test_token_cost_sums_input_and_output_at_their_own_rates():
+    usage = {"gpt-4o-2024-11-20": {"input_tokens": 1_000_000, "output_tokens": 1_000_000}}
+
+    assert token_cost(usage) == 12.50
+
+
+def test_token_cost_sums_across_multiple_models():
+    usage = {
+        "gpt-4o-mini-2024-07-18": {"input_tokens": 1_000_000, "output_tokens": 0},
+        "gpt-4o-2024-11-20": {"input_tokens": 1_000_000, "output_tokens": 0},
+    }
+
+    assert token_cost(usage) == 0.15 + 2.50
+
+
+def test_token_cost_ignores_models_with_no_known_price():
+    assert token_cost({"mystery-model-v9": {"input_tokens": 1_000_000}}) == 0.0
+
+
+def test_token_cost_is_zero_for_empty_usage():
+    assert token_cost({}) == 0.0
+
+
+def test_aggregate_reports_operational_means_and_total_cost():
+    records = [
+        {"cluster": "finance", "steps": 2, "latency_s": 4.0, "cost_usd": 0.01,
+         "tokens": 100, "error": None},
+        {"cluster": "finance", "steps": 4, "latency_s": 6.0, "cost_usd": 0.03,
+         "tokens": 300, "error": None},
+    ]
+
+    result = aggregate(records)
+
+    assert result["operational"]["steps"] == 3.0
+    assert result["operational"]["latency_s"] == 5.0
+    assert round(result["total_cost_usd"], 6) == 0.04
 
 
 def test_aggregate_averages_each_metric_over_scored_items():
@@ -1607,10 +1660,14 @@ live OpenAI, so it deliberately sits outside the mocked pytest suite.
 Usage: PYTHONPATH=. uv run python -m eval.run
 """
 
+import argparse
 import asyncio
 import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+from langchain_core.callbacks import UsageMetadataCallbackHandler
 
 from agent.graph import graph
 from eval.judges import (
@@ -1627,6 +1684,15 @@ RESULTS_DIR = Path("eval/results")
 TOP_K = 5
 CONCURRENCY = 4
 
+# USD per 1M tokens, (input, output). Verified 2026-07-28 against
+# https://developers.openai.com/api/docs/pricing — re-check before quoting
+# these figures anywhere, model pricing moves.
+MODEL_PRICES = {
+    "gpt-4o": (2.50, 10.00),
+    "gpt-4o-mini": (0.15, 0.60),
+    "text-embedding-3-small": (0.02, 0.0),
+}
+
 METRIC_KEYS = (
     "hit_rate",
     "recall",
@@ -1636,6 +1702,27 @@ METRIC_KEYS = (
     "context_precision",
     "abstention",
 )
+
+OPERATIONAL_KEYS = ("steps", "latency_s", "tokens", "cost_usd")
+
+
+def token_cost(usage: dict) -> float:
+    """USD cost from a UsageMetadataCallbackHandler.usage_metadata mapping.
+
+    Keys are dated model IDs like "gpt-4o-mini-2024-07-18", which start with
+    both "gpt-4o" and "gpt-4o-mini". Matching the LONGEST prefix is mandatory —
+    the shorter match would bill mini traffic at 16x its real rate.
+    Unknown models contribute nothing rather than guessing a price.
+    """
+    total = 0.0
+    for model, counts in usage.items():
+        candidates = [p for p in MODEL_PRICES if model.startswith(p)]
+        if not candidates:
+            continue
+        input_price, output_price = MODEL_PRICES[max(candidates, key=len)]
+        total += counts.get("input_tokens", 0) / 1_000_000 * input_price
+        total += counts.get("output_tokens", 0) / 1_000_000 * output_price
+    return total
 
 
 def aggregate(records: list[dict]) -> dict:
@@ -1654,12 +1741,22 @@ def aggregate(records: list[dict]) -> dict:
                 out[key] = sum(values) / len(values)
         return out
 
+    def op_means(rows: list[dict]) -> dict:
+        out = {}
+        for key in OPERATIONAL_KEYS:
+            values = [r[key] for r in rows if r.get(key) is not None]
+            if values:
+                out[key] = sum(values) / len(values)
+        return out
+
     clusters = sorted({r["cluster"] for r in scored})
     return {
         "overall": means(scored),
         "by_cluster": {
             c: means([r for r in scored if r["cluster"] == c]) for c in clusters
         },
+        "operational": op_means(scored),
+        "total_cost_usd": sum(r.get("cost_usd") or 0.0 for r in scored),
         "scored": len(scored),
         "failed": len(records) - len(scored),
     }
@@ -1686,7 +1783,21 @@ async def evaluate_item(item: dict, semaphore: asyncio.Semaphore) -> dict:
                 record["recall"] = recall_at_k(sources, expected)
                 record["mrr"] = mrr(sources, expected)
 
-            state = await graph.ainvoke({"query": item["query"]})
+            # Only the agent run is instrumented — judge calls construct their
+            # own clients without this handler, so grading cost never inflates
+            # the cost of serving the query.
+            usage = UsageMetadataCallbackHandler()
+            started = time.perf_counter()
+            state = await graph.ainvoke(
+                {"query": item["query"]}, config={"callbacks": [usage]}
+            )
+            record["latency_s"] = time.perf_counter() - started
+            record["steps"] = state.get("steps", 0)
+            record["cost_usd"] = token_cost(usage.usage_metadata)
+            record["tokens"] = sum(
+                c.get("total_tokens", 0) for c in usage.usage_metadata.values()
+            )
+
             answer = state.get("report") or ""
             contexts = [d["text"] for d in (state.get("retrieved_docs") or [])]
             record["answer"] = answer
@@ -1724,8 +1835,20 @@ def _print_report(summary: dict) -> None:
     for cluster, metrics in summary["by_cluster"].items():
         print(row(cluster, metrics))
 
+    ops = summary["operational"]
+    if ops:
+        print(f"\n  OPERATIONAL  (concurrency={summary['concurrency']})")
+        print(f"    steps/run     {ops.get('steps', 0):.2f}")
+        print(f"    latency/run   {ops.get('latency_s', 0):.2f}s")
+        print(f"    tokens/run    {ops.get('tokens', 0):.0f}")
+        print(f"    cost/run      ${ops.get('cost_usd', 0):.4f}")
+        print(f"    total cost    ${summary['total_cost_usd']:.4f}")
+        if summary["concurrency"] > 1:
+            print("    NOTE: latency is contended at this concurrency.")
+            print("          Use --sequential for comparable figures.")
 
-async def main() -> int:
+
+async def main(concurrency: int = CONCURRENCY) -> int:
     if not GOLDEN_SET.exists():
         raise SystemExit(f"Golden set not found at {GOLDEN_SET}")
 
@@ -1735,11 +1858,14 @@ async def main() -> int:
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    semaphore = asyncio.Semaphore(CONCURRENCY)
-    print(f"Evaluating {len(items)} items", flush=True)
+    semaphore = asyncio.Semaphore(concurrency)
+    print(f"Evaluating {len(items)} items at concurrency {concurrency}", flush=True)
     records = await asyncio.gather(*(evaluate_item(i, semaphore) for i in items))
 
     summary = aggregate(list(records))
+    # Latency is only comparable across runs at the same concurrency, so the
+    # setting travels with the numbers rather than living in someone's memory.
+    summary["concurrency"] = concurrency
     _print_report(summary)
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -1758,13 +1884,21 @@ async def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(asyncio.run(main()))
+    parser = argparse.ArgumentParser(description="Run the RAG evaluation suite.")
+    parser.add_argument(
+        "--sequential",
+        action="store_true",
+        help="Run items one at a time. Latency figures are only comparable "
+        "between runs at the same concurrency; use this for clean numbers.",
+    )
+    args = parser.parse_args()
+    raise SystemExit(asyncio.run(main(1 if args.sequential else CONCURRENCY)))
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `PYTHONPATH=. uv run pytest tests/ -v`
-Expected: all pass, 26 in `test_eval_metrics.py`
+Expected: all pass, 32 in `test_eval_metrics.py`
 
 - [ ] **Step 5: Run the eval for real**
 
@@ -1773,7 +1907,15 @@ PYTHONPATH=. uv run python -m eval.run
 echo "exit: $?"
 ```
 
-Expected: a progress line of dots, an overall row, a per-cluster breakdown, a JSON file under `eval/results/`, and exit 0.
+Expected: a progress line of dots, an overall row, a per-cluster breakdown, an operational block, a JSON file under `eval/results/`, and exit 0.
+
+Then take one clean latency reading:
+
+```bash
+PYTHONPATH=. uv run python -m eval.run --sequential
+```
+
+This is the run whose latency figure is quotable. The concurrent run's latency is contended and exists only so the suite is fast.
 
 - [ ] **Step 6: Sanity-check the baseline**
 
@@ -1781,12 +1923,18 @@ Within-cluster retrieval should be visibly weaker than cross-cluster. If every c
 
 Confirm the four `unanswerable` items score well on abstention. A low abstention score is a real finding: it means the pipeline confabulates when the corpus has no answer.
 
+Sanity-check the operational numbers too:
+
+- **steps/run** should sit near 1.0. `MAX_STEPS` is 6, and the critic re-search loop only fires below a 0.7 score. A mean well above 1 means the critic is rejecting good reports and you are paying for retries.
+- **cost/run** should be a fraction of a cent at gpt-4o-mini rates. Anything above a cent means the retry loop is running hot, or far more context is reaching the writer than intended.
+- **tokens/run** rising with cluster difficulty is expected; a flat figure across clusters suggests retrieval is returning the same volume regardless of question.
+
 - [ ] **Step 7: Commit**
 
 ```bash
 uv run ruff format . && uv run ruff check .
 git add eval/run.py tests/test_eval_metrics.py
-git commit -m "feat: add the eval runner with per-cluster reporting"
+git commit -m "feat: add the eval runner with per-cluster and cost reporting"
 ```
 
 ---
@@ -1815,6 +1963,7 @@ Add to the commands block:
 ```bash
 PYTHONPATH=. uv run python -m eval.generate_corpus
 PYTHONPATH=. uv run python -m eval.run
+PYTHONPATH=. uv run python -m eval.run --sequential   # clean latency figures
 ```
 
 - [ ] **Step 2: Add an eval section to `.claude/CLAUDE.md` architecture notes**
@@ -1846,8 +1995,21 @@ git commit -m "docs: point ingest at docs/corpus and document the eval suite"
 
 Recorded so they are not lost. Each now has a baseline to measure against.
 
+### Pipeline
+
 1. **Global ranking bug** — `agent/nodes.py:41-50` concatenates per-sub-query results in sub-query order rather than sorting by score, so a 0.31 chunk can outrank a 0.88 chunk in the writer's prompt. Highest-value fix.
 2. **Score threshold** — no minimum similarity, so junk always reaches the writer. The prompt at `agent/nodes.py:90-93` is a band-aid over this.
 3. **Chunking** — `chunk_size=512` on PDFs with headings and tables. Section-boundary chunking, measured before and after.
 4. **Reranking / hybrid search** — the README roadmap item.
 5. **Content-hash ingestion** — `--reset` is a blunt instrument; per-document change detection would be correct.
+
+### Agent-layer evaluation
+
+Deliberately deferred — this plan measures RAG quality plus operational cost, not
+agent behaviour. Recorded because current practice treats these as the core of
+multi-agent evaluation, and each is cheap once a baseline exists.
+
+6. **Trajectory evaluation** — the node path and tool-call sequence, recoverable via `graph.astream(stream_mode="updates")`. `agentevals` 0.0.9 (LangChain's own) verified compatible with this project's pins. Matters because a correct answer reached via a wrong trajectory is a false positive that hides real fragility.
+7. **Tool-call accuracy** — `agent/tools.py:14-31` instructs the LLM *not* to web-search when internal documents suffice. Against a fictional-company corpus, Tavily can know nothing, so every invocation is a measurable false positive. Needs a `should_web_search` field on golden items.
+8. **Critic calibration** — `agent/graph.py:14` gates on `score >= 0.7` with nothing establishing that the score means anything. Correlating `state["score"]` against judge faithfulness costs nothing extra and would show whether the quality gate is real or decorative.
+9. **Judge calibration** — the judge has no measured agreement against human labels. Hand-labelling ~10 items and reporting Cohen's kappa, plus a cross-family check against a non-OpenAI judge, is what current practice considers production-ready. Note `gpt-4o` judging `gpt-4o-mini` still shares a model family.
