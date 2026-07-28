@@ -16,6 +16,8 @@ HQ Melbourne; offices Sydney, Perth, Auckland. 340 staff.
 | Personal/carer's leave | 12 days per year | leave_policy |
 | Leave request notice | 10 business days for 5+ consecutive days | leave_policy |
 | Leave balance cap | 40 days, excess forfeited each 30 June | leave_policy |
+| Leave request response | 5 business days | leave_policy |
+| Medical certificate required | 3+ consecutive days of personal/carer's leave | leave_policy |
 | Parental leave, primary carer | 18 weeks at full pay | parental_leave |
 | Parental leave, secondary carer | 6 weeks at full pay | parental_leave |
 | Parental leave eligibility | 12 months continuous service | parental_leave |
