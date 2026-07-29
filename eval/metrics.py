@@ -1,3 +1,5 @@
+"""Pure retrieval metrics. Source-document granularity, no I/O."""
+
 
 def hit_rate_at_k(retrieved_sources: list[str], expected_sources: list[str]) -> float:
     """1.0 if any retrieved source is expected, else 0.0.
