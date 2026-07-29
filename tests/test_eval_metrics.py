@@ -1,7 +1,12 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from eval.judges import average_precision, score_context_precision, score_faithfulness
+from eval.judges import (
+    average_precision,
+    score_abstention,
+    score_context_precision,
+    score_faithfulness,
+)
 from eval.metrics import hit_rate_at_k, mrr, recall_at_k
 from eval.run import aggregate, token_cost
 
@@ -121,6 +126,39 @@ def test_context_precision_uses_judged_relevance_in_rank_order():
 
 def test_context_precision_is_zero_without_contexts():
     assert asyncio.run(score_context_precision("q", "ref", [])) == 0.0
+
+
+def test_abstention_scores_zero_for_confident_fabrication_even_if_model_mislabels_declined():
+    # Real failure from a 2026-07-29 eval run: una-004's actual agent answer,
+    # a pure fabrication with no hedging at all, was scored declined=True by
+    # the single-boolean judge. asserted_claim must be the source of truth —
+    # a stray declined=True must not override a populated asserted_claim.
+    answer = "Harbourline's preferred carrier for domestic flights is Harbour Air."
+    fake_llm = MagicMock()
+    fake_llm.ainvoke = AsyncMock(
+        return_value=MagicMock(asserted_claim="Harbour Air", declined=True)
+    )
+
+    with patch("eval.judges._abstention_llm", fake_llm):
+        score = asyncio.run(score_abstention(answer))
+
+    assert score == 0.0
+
+
+def test_abstention_still_scores_one_for_a_genuine_decline():
+    answer = (
+        "The retrieved context does not provide specific information regarding "
+        "Harbourline's preferred carrier for domestic flights."
+    )
+    fake_llm = MagicMock()
+    fake_llm.ainvoke = AsyncMock(
+        return_value=MagicMock(asserted_claim=None, declined=True)
+    )
+
+    with patch("eval.judges._abstention_llm", fake_llm):
+        score = asyncio.run(score_abstention(answer))
+
+    assert score == 1.0
 
 
 def test_token_cost_prices_mini_by_longest_prefix_not_gpt_4o():

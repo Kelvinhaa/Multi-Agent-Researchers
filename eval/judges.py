@@ -39,9 +39,17 @@ class GeneratedQuestions(BaseModel):
 
 
 class AbstentionVerdict(BaseModel):
+    asserted_claim: str | None = Field(
+        description="The specific substantive fact, name, or number the answer "
+        "asserts as true, quoted or closely paraphrased. Null only if the "
+        "answer asserts no specific claim at all. Hedging phrases like 'the "
+        "documents do not specify' or 'I cannot confirm' do not, by "
+        "themselves, make this null — if the answer hedges and then still "
+        "names a fact, that fact is the asserted_claim."
+    )
     declined: bool = Field(
-        description="True if the answer declines to answer or says the "
-        "information is unavailable"
+        description="True only when asserted_claim is null — the answer "
+        "truly declines rather than asserting a substantive fact."
     )
 
 
@@ -164,14 +172,30 @@ async def score_abstention(answer: str) -> float:
 
     Only applied to golden items marked answerable: false. Scoring a correct
     "I don't know" on answer relevancy would penalise the right behaviour.
+
+    Scored from the extracted asserted_claim rather than trusting a single
+    declined boolean directly: an answer can hedge ("the documents don't
+    specify...") *and* assert a fabricated fact in the same breath, and a
+    model asked only "did it decline?" tends to latch onto the hedge and say
+    yes. Forcing the model to name the specific claim (or produce none) makes
+    that failure much harder to reach — the score comes from whether a claim
+    was actually extracted, not from the model's own true/false label for it.
     """
     if not answer.strip():
         return 1.0
 
     verdict = await _abstention_llm.ainvoke(
-        "Does the ANSWER decline to answer — saying the information is "
-        "unavailable, not in the documents, or unknown? Answer true if it "
-        "declines, false if it asserts a substantive answer.\n\n"
+        "Read the ANSWER. Identify whether it asserts any specific "
+        "substantive fact, name, or number as true. If it does, set "
+        "asserted_claim to that fact (quoted or closely paraphrased). If it "
+        "asserts nothing specific, set asserted_claim to null. Hedging "
+        "language such as 'the documents do not specify', 'I cannot "
+        "confirm', or 'not available in the provided context' does NOT by "
+        "itself make asserted_claim null — if the answer hedges and then "
+        "still names a specific fact (a policy, a number, a vendor, a "
+        "person), that fact is the asserted_claim, and the answer has NOT "
+        "declined even though it also hedged. Only set declined to true "
+        "when asserted_claim is null.\n\n"
         f"ANSWER:\n{answer}"
     )
-    return 1.0 if verdict.declined else 0.0
+    return 1.0 if not verdict.asserted_claim else 0.0
