@@ -132,7 +132,7 @@
     "query": "What service credit applies if uptime falls below 99%?",
     "cluster": "commercial",
     "expected_sources": ["sla_service_credits"],
-    "reference_answer": "A 25% credit of the monthly fee applies below 99.0% uptime, rising to 50% below 95%. Below the 99.9% standard target the credit is 10%.",
+    "reference_answer": "Falling below 99.9% uptime entitles a 10% credit of monthly fees, below 99.0% a 25% credit, and below 95% a 50% credit. These bands are not cumulative — the customer receives only the single largest credit their actual uptime qualifies for.",
     "answerable": true
   },
   {
