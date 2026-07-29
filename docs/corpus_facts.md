@@ -111,6 +111,7 @@ HQ Melbourne; offices Sydney, Perth, Auckland. 340 staff.
 | Service credit, below 95% | 50% of monthly fee | sla_service_credits |
 | Contractual P1 response | 30 minutes | sla_service_credits |
 | Credit claim window | 30 days from incident | sla_service_credits |
+| Service credit bands | Not cumulative; customer receives the credit for the lowest band their uptime falls into | sla_service_credits |
 | Money-back window | 30 days, new annual contracts | refund_policy |
 | Pro-rata cancellation notice | 90 days | refund_policy |
 | Usage overages | Non-refundable | refund_policy |
