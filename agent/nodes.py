@@ -1,9 +1,7 @@
 import asyncio
-from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
-from langgraph.graph.message import add_messages
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import SystemMessage, ToolMessage
 from agent.state import AgentState
 from agent.tools import tools
 from rag.retriever import retrieve
