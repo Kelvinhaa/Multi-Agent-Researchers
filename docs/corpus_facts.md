@@ -61,10 +61,12 @@ HQ Melbourne; offices Sydney, Perth, Auckland. 340 staff.
 | Procurement, CFO | $25,000–$100,000 | procurement_approval |
 | Procurement, board | Above $100,000 | procurement_approval |
 | New vendor security review | Required if handling customer data | procurement_approval |
+| Vendor renewal security review | Not required unless the vendor's access to customer data materially changes | procurement_approval |
 | Standard payment terms | 30 days | invoicing_payment_terms |
 | Enterprise payment terms | 45 days | invoicing_payment_terms |
 | Late payment fee | 1.5% per month | invoicing_payment_terms |
 | Purchase order required above | $2,500 | invoicing_payment_terms |
+| Disputed invoice, undisputed portion | Dispute does not extend payment terms for the undisputed portion | invoicing_payment_terms |
 
 ## Engineering
 
@@ -82,6 +84,7 @@ HQ Melbourne; offices Sydney, Perth, Auckland. 340 staff.
 | On-call handover | Wednesday 10:00 AEST | on_call_rotation |
 | On-call allowance | $900 per week | on_call_rotation |
 | On-call frequency cap | 1 rotation per 4 weeks | on_call_rotation |
+| On-call swap requirement | Teammate of equivalent seniority; must be recorded before the rotation begins | on_call_rotation |
 | Deploy window | Monday–Thursday, no Friday deploys | release_deployment |
 | Canary stage | 10% of traffic for 30 minutes | release_deployment |
 | Automatic rollback | Error rate above 2% | release_deployment |
@@ -104,6 +107,7 @@ HQ Melbourne; offices Sydney, Perth, Auckland. 340 staff.
 | Discount, sales manager | 10–20% | discount_approval |
 | Discount, VP Sales | 20–30% | discount_approval |
 | Discount, CFO and CEO | Above 30% | discount_approval |
+| Discount tier assessment, multi-year/bundled deals | Blended effective discount across the full deal, not per line item | discount_approval |
 | Uptime, standard tier | 99.9% | sla_service_credits |
 | Uptime, enterprise tier | 99.95% | sla_service_credits |
 | Service credit, below 99.9% | 10% of monthly fee | sla_service_credits |
@@ -111,7 +115,7 @@ HQ Melbourne; offices Sydney, Perth, Auckland. 340 staff.
 | Service credit, below 95% | 50% of monthly fee | sla_service_credits |
 | Contractual P1 response | 30 minutes | sla_service_credits |
 | Credit claim window | 30 days from incident | sla_service_credits |
-| Service credit bands | Not cumulative; customer receives the credit for the lowest band their uptime falls into | sla_service_credits |
+| Service credit bands | Not cumulative; customer receives the single largest credit their uptime qualifies for | sla_service_credits |
 | Money-back window | 30 days, new annual contracts | refund_policy |
 | Pro-rata cancellation notice | 90 days | refund_policy |
 | Usage overages | Non-refundable | refund_policy |
@@ -122,6 +126,7 @@ HQ Melbourne; offices Sydney, Perth, Auckland. 340 staff.
 | Partner tiers | Registered, Silver, Gold | partner_program |
 | Gold tier requirement | $500,000 referred ARR | partner_program |
 | Partner margin | 15% / 22% / 30% by tier | partner_program |
+| Partner margin payment trigger | Paid once the referred contract is signed and invoiced | partner_program |
 | Deal registration validity | 90 days | partner_program |
 
 ## Planted near-misses

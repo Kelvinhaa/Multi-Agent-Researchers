@@ -34,7 +34,7 @@ below 99.9% uptime entitles the customer to a credit of 10% of monthly fees.
 Falling below 99.0% entitles the customer to a credit of 25% of monthly
 fees. Falling below 95% entitles the customer to a credit of 50% of monthly
 fees. Credits are not cumulative across these bands; the customer receives
-the credit for the lowest band their actual uptime falls into.
+the single largest credit for which their actual uptime qualifies.
 
 | Uptime achieved | Service credit |
 |---|---|
