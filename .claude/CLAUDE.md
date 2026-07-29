@@ -14,7 +14,10 @@ PYTHONPATH=. uv run uvicorn api.routes:app --reload
 PYTHONPATH=. uv run pytest tests/ -v
 PYTHONPATH=. uv run pytest tests/test_agent.py::test_name -v
 uv run ruff format . && uv run ruff check .
-uv run python -m rag.ingest docs/
+uv run python -m rag.ingest docs/corpus/ --reset
+PYTHONPATH=. uv run python -m eval.generate_corpus
+PYTHONPATH=. uv run python -m eval.run
+PYTHONPATH=. uv run python -m eval.run --sequential   # clean latency figures
 uv add <package-name>
 ```
 
@@ -42,6 +45,12 @@ Pinecone index uses integrated inference (embeddings computed server-side by Pin
 Graph compiled in `agent/graph.py`. State in `agent/state.py`. Nodes in `agent/nodes.py`. Tools in `agent/tools.py`. Prompts in `prompts/templates.py`. Pinecone singleton in `vectorstore/client.py`.
 
 RAG is split: `rag/ingest.py` (offline, writes to Pinecone) and `rag/retriever.py` (online, reads per request). Chunking: `chunk_size=512`, `chunk_overlap=50`.
+
+Eval lives in `eval/`: `metrics.py` (pure retrieval metrics), `judges.py`
+(LLM-judged answer quality, `gpt-4o` to avoid self-preference bias),
+`run.py` (CLI, needs live Pinecone + OpenAI, outside the mocked pytest suite).
+Corpus content is authored in `eval/corpus_src/*.md` and rendered to
+`docs/corpus/*.pdf`; every figure traces to `docs/corpus_facts.md`.
 
 Real bugs found/fixed during development (interview reference, not project docs): see `ENGINEERING_LOG.md`.
 
