@@ -1,92 +1,202 @@
 [
   {
-    "query": "What does it mean for an event to have probability 0 or probability 1?",
-    "expected_sources": ["probability_basics"],
-    "reference_answer": "Probability is a measure between 0 and 1 of how likely an event is to occur. An event with probability 0 cannot happen; an event with probability 1 is certain."
+    "id": "peo-001",
+    "query": "How many days of annual leave do permanent full-time employees get?",
+    "cluster": "people",
+    "expected_sources": ["leave_policy"],
+    "reference_answer": "Permanent full-time employees accrue 25 days of paid annual leave per year, accruing progressively. Balances are capped at 40 days, with any excess forfeited on 30 June.",
+    "answerable": true
   },
   {
-    "query": "What are Kolmogorov's three axioms of probability?",
-    "expected_sources": ["probability_basics"],
-    "reference_answer": "1) P(A) >= 0 for any event A. 2) P(S) = 1, where S is the sample space of all possible outcomes. 3) For mutually exclusive events A and B, P(A union B) = P(A) + P(B)."
+    "id": "peo-002",
+    "query": "How much paid parental leave does a primary carer receive?",
+    "cluster": "people",
+    "expected_sources": ["parental_leave"],
+    "reference_answer": "Primary carers receive 18 weeks at full pay, after 12 months of continuous service. Secondary carers receive 6 weeks at full pay.",
+    "answerable": true
   },
   {
-    "query": "How do you calculate the probability of A given that B has already happened?",
-    "expected_sources": ["probability_basics"],
-    "reference_answer": "The conditional probability of A given B is P(A|B) = P(A and B) / P(B), provided P(B) > 0."
+    "id": "peo-003",
+    "query": "What are the core hours staff must be available during?",
+    "cluster": "people",
+    "expected_sources": ["remote_work"],
+    "reference_answer": "Core hours are 10:00 to 15:00 AEST. Staff may work remotely up to 3 days per week; fully remote arrangements require Executive Leadership Team approval.",
+    "answerable": true
   },
   {
-    "query": "What does it mean for two events to be independent?",
-    "expected_sources": ["probability_basics"],
-    "reference_answer": "Two events A and B are independent if P(A and B) = P(A) * P(B), equivalently P(A|B) = P(A) — knowing B occurred gives no information about A."
+    "id": "peo-004",
+    "query": "When do promotion nominations close?",
+    "cluster": "people",
+    "expected_sources": ["performance_review"],
+    "reference_answer": "Promotion nominations close on 14 February and 14 August, aligning with the twice-yearly review cycle in March and September.",
+    "answerable": true
   },
   {
-    "query": "What is Bayes' theorem used for?",
-    "expected_sources": ["probability_basics"],
-    "reference_answer": "Bayes' theorem, P(A|B) = P(B|A) * P(A) / P(B), is used to update a prior belief P(A) into a posterior belief P(A|B) after observing evidence B."
+    "id": "peo-005",
+    "query": "At what value does a gift need to be declared?",
+    "cluster": "people",
+    "expected_sources": ["code_of_conduct"],
+    "reference_answer": "Gifts valued above $200 must be declared. Conflicts of interest must be declared within 5 business days.",
+    "answerable": true
   },
   {
-    "query": "How is the expected value of a discrete random variable calculated?",
-    "expected_sources": ["probability_basics"],
-    "reference_answer": "The expected value of a discrete random variable X is E[X], the sum of x * P(X = x) over all possible values x — a probability-weighted average."
+    "id": "fin-001",
+    "query": "What is the daily meal allowance for domestic travel?",
+    "cluster": "finance",
+    "expected_sources": ["travel_policy"],
+    "reference_answer": "The domestic daily meal allowance is $85. International travel is $120 per day.",
+    "answerable": true
   },
   {
-    "query": "What technologies make up this project's tech stack?",
-    "expected_sources": ["README"],
-    "reference_answer": "LangGraph 0.6.x for agent orchestration, OpenAI gpt-4o-mini as the LLM, a RAG pipeline over Pinecone for retrieval using Pinecone's integrated inference (llama-text-embed-v2, computed server-side rather than via a separate OpenAI embeddings call), the Tavily API for web search, FastAPI plus uvicorn as the API server, uv as the package manager, on Python 3.12."
+    "id": "fin-002",
+    "query": "Above what amount do I need to keep a receipt for an expense claim?",
+    "cluster": "finance",
+    "expected_sources": ["expense_reimbursement"],
+    "reference_answer": "Receipts are required for any expense above $75. Claims must be submitted within 30 days of the spend and are paid in the pay run on the 15th.",
+    "answerable": true
   },
   {
-    "query": "What chunking strategy does the RAG pipeline use, according to the project README?",
-    "expected_sources": ["README"],
-    "reference_answer": "The README states the RAG pipeline uses RecursiveCharacterTextSplitter with chunk_size=512 and chunk_overlap=50, with each chunk labelled by its source filename in metadata."
+    "id": "fin-003",
+    "query": "What is the monthly corporate card limit for a manager?",
+    "cluster": "finance",
+    "expected_sources": ["corporate_card"],
+    "reference_answer": "Managers have a $15,000 monthly corporate card limit, against a $5,000 standard limit. Cards must be reconciled within 10 business days.",
+    "answerable": true
   },
   {
-    "query": "What does the supervisor agent do in the overall agent architecture?",
-    "expected_sources": ["README"],
-    "reference_answer": "The supervisor decomposes the user's query and sets the routing decision in state[\"next\"], directing the graph to the researcher node next."
+    "id": "fin-004",
+    "query": "Who approves a purchase of $40,000?",
+    "cluster": "finance",
+    "expected_sources": ["procurement_approval"],
+    "reference_answer": "The CFO approves purchases between $25,000 and $100,000. Above $100,000 requires board approval.",
+    "answerable": true
   },
   {
-    "query": "How is this project packaged for deployment?",
-    "expected_sources": ["README"],
-    "reference_answer": "The project is containerised with Docker; the image targets Python 3.12-slim and copies only the application source to keep the image small. In production, APP_ENV is set to production and secrets are mounted via the cloud provider's secret manager rather than a .env file."
+    "id": "fin-005",
+    "query": "What are the standard payment terms on a customer invoice?",
+    "cluster": "finance",
+    "expected_sources": ["invoicing_payment_terms"],
+    "reference_answer": "Standard payment terms are 30 days; enterprise customers get 45 days. Late payments attract a 1.5% monthly fee.",
+    "answerable": true
   },
   {
-    "query": "What API keys do you need before setting up this project?",
-    "expected_sources": ["README"],
-    "reference_answer": "You need an OpenAI API key, a Pinecone API key, and a Tavily API key, plus uv installed locally."
+    "id": "eng-001",
+    "query": "How quickly must a P1 incident be acknowledged internally?",
+    "cluster": "engineering",
+    "expected_sources": ["incident_response"],
+    "reference_answer": "A P1 must be acknowledged within 15 minutes internally, with a resolution target of 4 hours, a named incident commander, and a status page update within 30 minutes.",
+    "answerable": true
   },
   {
-    "query": "How do you ingest a new document into the knowledge base at runtime, per the README?",
-    "expected_sources": ["README"],
-    "reference_answer": "The README documents a POST request to the /ingest endpoint with a file upload, e.g. curl -X POST http://localhost:8000/ingest -F \"file=@path/to/document.pdf\"."
+    "id": "eng-002",
+    "query": "What is the on-call allowance and how long is a rotation?",
+    "cluster": "engineering",
+    "expected_sources": ["on_call_rotation"],
+    "reference_answer": "Rotations run 7 days, handing over Wednesday at 10:00 AEST, and the allowance is $900 per week. No engineer does more than one rotation in any 4 weeks.",
+    "answerable": true
   },
   {
-    "query": "Why could requests hang indefinitely, and how was it fixed?",
-    "expected_sources": ["ENGINEERING_LOG"],
-    "reference_answer": "Two nested unbounded loops existed (critic-to-researcher retry, and researcher-to-tools tool-calling). LangGraph's actual default recursion limit turned out to be 10,007, not the commonly-cited 25, so it gave no practical protection. The fix added a single steps counter, incremented once per researcher visit, checked by both routing functions and capped at MAX_STEPS=6."
+    "id": "eng-003",
+    "query": "What error rate triggers an automatic rollback during a deploy?",
+    "cluster": "engineering",
+    "expected_sources": ["release_deployment"],
+    "reference_answer": "An error rate above 2% triggers automatic rollback. Releases canary at 10% of traffic for 30 minutes, and deploys run Monday to Thursday only.",
+    "answerable": true
   },
   {
-    "query": "What used to happen when the Tavily web search tool hit a network error?",
-    "expected_sources": ["ENGINEERING_LOG"],
-    "reference_answer": "The web_search tool had zero error handling, so any exception propagated and crashed the entire LangGraph run with no response sent at all. The fix wrapped the Tavily call in a try/except and returned an error string to the LLM instead of raising."
+    "id": "eng-004",
+    "query": "How long is production access granted for when elevated?",
+    "cluster": "engineering",
+    "expected_sources": ["access_control"],
+    "reference_answer": "Production access is granted as a time-boxed 8-hour elevation. Access is reviewed quarterly and revoked within 2 hours of offboarding.",
+    "answerable": true
   },
   {
-    "query": "Why was the researcher node making redundant Pinecone calls on every loop iteration?",
-    "expected_sources": ["ENGINEERING_LOG"],
-    "reference_answer": "The researcher node re-ran RAG retrieval for every sub-query on every visit, even though the queries never changed between loop iterations. The fix was to skip retrieval once retrieved_docs was already populated."
+    "id": "eng-005",
+    "query": "How long is customer shipment data retained?",
+    "cluster": "engineering",
+    "expected_sources": ["data_retention"],
+    "reference_answer": "Customer shipment data is retained for 7 years. Application logs are kept 90 days, audit logs 3 years, and backups 35 days.",
+    "answerable": true
   },
   {
-    "query": "Why did live web search results never show up in the final written report?",
-    "expected_sources": ["ENGINEERING_LOG"],
-    "reference_answer": "The researcher's LLM call sent a fresh prompt string each time instead of the actual message history, so it never saw its own prior tool results; separately, the writer only ever read retrieved_docs and never the message history, so Tavily results were structurally discarded. The fix passed full message history into the researcher's LLM call and extracted ToolMessage content directly into the writer's prompt."
+    "id": "com-001",
+    "query": "Who needs to approve a 25% discount?",
+    "cluster": "commercial",
+    "expected_sources": ["discount_approval"],
+    "reference_answer": "The VP Sales approves discounts between 20% and 30%. Above 30% requires joint CFO and CEO approval.",
+    "answerable": true
   },
   {
-    "query": "What quoting bug was discovered while adding LangSmith observability?",
-    "expected_sources": ["ENGINEERING_LOG"],
-    "reference_answer": "Docker's --env-file parser doesn't strip quotes the way python-dotenv or a shell would, so setting LANGSMITH_PROJECT=\"Multi-Agent Research\" baked literal quote characters into the actual project name."
+    "id": "com-002",
+    "query": "What service credit applies if uptime falls below 99%?",
+    "cluster": "commercial",
+    "expected_sources": ["sla_service_credits"],
+    "reference_answer": "Falling below 99.9% uptime entitles a 10% credit of monthly fees, below 99.0% a 25% credit, and below 95% a 50% credit. These bands are not cumulative — the customer receives only the single largest credit their actual uptime qualifies for.",
+    "answerable": true
   },
   {
-    "query": "How does retrieval work in this project?",
-    "expected_sources": ["README", "ENGINEERING_LOG"],
-    "reference_answer": "Per the README, retrieval is a semantic similarity search using the embedded user query against the Pinecone index, returning top-k results with source metadata. The engineering log separately notes a bug where the researcher node re-ran this retrieval redundantly on every loop visit even though the underlying queries hadn't changed, which was fixed by skipping retrieval once results were already populated."
+    "id": "com-003",
+    "query": "How much notice is needed to cancel and get a pro-rata refund?",
+    "cluster": "commercial",
+    "expected_sources": ["refund_policy"],
+    "reference_answer": "Pro-rata refunds require 90 days notice. New annual contracts also carry a 30-day money-back guarantee, and usage overages are non-refundable.",
+    "answerable": true
+  },
+  {
+    "id": "com-004",
+    "query": "Where is customer data stored by default, and what is the alternative?",
+    "cluster": "commercial",
+    "expected_sources": ["data_processing"],
+    "reference_answer": "Data resides in ap-southeast-2 by default, with eu-west-1 available for customers requiring EU residency. Breaches are notified within 72 hours.",
+    "answerable": true
+  },
+  {
+    "id": "xcl-001",
+    "query": "What is the P1 response time we commit to contractually, and how does it compare to our internal acknowledgement target?",
+    "cluster": "cross",
+    "expected_sources": ["sla_service_credits", "incident_response"],
+    "reference_answer": "The contractual P1 response commitment is 30 minutes, while the internal acknowledgement target is stricter at 15 minutes, giving the on-call team headroom against the customer-facing commitment.",
+    "answerable": true
+  },
+  {
+    "id": "xcl-002",
+    "query": "A partner registers a deal and the customer later cancels. How long is deal registration valid, and what notice does the customer need to give?",
+    "cluster": "cross",
+    "expected_sources": ["partner_program", "refund_policy"],
+    "reference_answer": "Deal registration is valid for 90 days. Separately, a customer cancelling for a pro-rata refund must give 90 days notice — the two 90-day periods are unrelated.",
+    "answerable": true
+  },
+  {
+    "id": "una-001",
+    "query": "What is Harbourline's employee stock option policy?",
+    "cluster": "unanswerable",
+    "expected_sources": [],
+    "reference_answer": "The corpus contains no information about stock options or equity. The correct response is to say so rather than speculate.",
+    "answerable": false
+  },
+  {
+    "id": "una-002",
+    "query": "How much is the annual professional development budget per employee?",
+    "cluster": "unanswerable",
+    "expected_sources": [],
+    "reference_answer": "The corpus contains no professional development or training budget. The correct response is to say so rather than speculate.",
+    "answerable": false
+  },
+  {
+    "id": "una-003",
+    "query": "How many days of bereavement leave are employees entitled to?",
+    "cluster": "unanswerable",
+    "expected_sources": [],
+    "reference_answer": "The leave policy covers annual and personal/carer's leave only; bereavement leave is not addressed anywhere in the corpus.",
+    "answerable": false
+  },
+  {
+    "id": "una-004",
+    "query": "Which airline is Harbourline's preferred carrier for domestic flights?",
+    "cluster": "unanswerable",
+    "expected_sources": [],
+    "reference_answer": "The travel policy sets allowances and cabin-class rules but names no preferred airline or booking vendor.",
+    "answerable": false
   }
 ]

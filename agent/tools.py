@@ -47,4 +47,5 @@ def web_search(query: str) -> str:
         for i, r in enumerate(results, start=1)
     )
 
+
 tools = [web_search]

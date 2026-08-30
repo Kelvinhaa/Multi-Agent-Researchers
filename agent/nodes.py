@@ -1,12 +1,11 @@
 import asyncio
-from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
-from langgraph.graph.message import add_messages
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import SystemMessage, ToolMessage
 from agent.state import AgentState
 from agent.tools import tools
 from rag.retriever import retrieve
+from agent.untrusted import wrap_untrusted
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -52,7 +51,7 @@ async def researcher(state: AgentState) -> dict:
     prompt = f"""You are a researcher agent. You are responsible for retrieving the context based on the user's query.
               The user's query is: {state["query"]}
               It was broken down into these sub-questions: {sub_queries}
-              The retrieved docs are: {docs}
+              The retrieved docs are: {wrap_untrusted("retrieved_docs", docs)}
               """
     if state.get("feedback"):
         prompt += f"\nPrevious attempt was rejected. Feedback: {state['feedback']}"
@@ -91,10 +90,10 @@ def writer(state: AgentState) -> dict:
               ranked by similarity, and low-ranked context is often unrelated to the
               question — ignore anything that does not help answer it rather than
               summarising it.
-              The retrieved context is: {state["retrieved_docs"]}
+              The retrieved context is: {wrap_untrusted("retrieved_context", state["retrieved_docs"])}
               """
     if web_results:
-        prompt += f"\nWeb search results: {web_results}"
+        prompt += f"\nWeb search results: {wrap_untrusted('web_results', web_results)}"
     if state.get("report"):
         prompt += f"\nPrevious draft: {state['report']}"
 

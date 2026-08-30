@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from rag.embedder import TEXT_FIELD
 from rag.retriever import retrieve
 
 
@@ -10,8 +11,16 @@ def _fake_response(hits):
 
 def test_retrieve_returns_parsed_hits():
     fake_hits = [
-        SimpleNamespace(id="doc1-0", score=0.92, fields={"chunk_text": "alpha content", "source": "doc1"}),
-        SimpleNamespace(id="doc2-0", score=0.81, fields={"chunk_text": "beta content", "source": "doc2"}),
+        SimpleNamespace(
+            id="doc1-0",
+            score=0.92,
+            fields={TEXT_FIELD: "alpha content", "source": "doc1"},
+        ),
+        SimpleNamespace(
+            id="doc2-0",
+            score=0.81,
+            fields={TEXT_FIELD: "beta content", "source": "doc2"},
+        ),
     ]
     fake_index = MagicMock()
     fake_index.search.return_value = _fake_response(fake_hits)
@@ -23,7 +32,7 @@ def test_retrieve_returns_parsed_hits():
         namespace="default",
         top_k=2,
         inputs={"text": "what is alpha?"},
-        fields=["chunk_text", "source"],
+        fields=[TEXT_FIELD, "source"],
     )
     assert results == [
         {"id": "doc1-0", "score": 0.92, "text": "alpha content", "source": "doc1"},
