@@ -148,17 +148,28 @@ APP_ENV=development
 
 **4. Index creation is automatic**
 
-`vectorstore/client.py`'s `ensure_index()` creates the index on first use via Pinecone integrated inference (`llama-text-embed-v2`, dimension 1024, cosine similarity) if it doesn't already exist — no manual console step needed.
+`vectorstore/client.py`'s `ensure_index()` creates the index on your first ingest run via Pinecone integrated inference (`llama-text-embed-v2`, dimension 1024, cosine similarity) if it doesn't already exist — no manual console step needed. The read path never creates it, so if you skip step 5 there is simply no index (see below).
 
-**5. Ingest your knowledge base** (optional — skip to use web search only)
+**5. Ingest a knowledge base** — or skip it
 
-Place documents in `docs/corpus/` then run:
+The repo ships a 20-document fictional-company corpus (For initial purpose of retrieving internal document) in `docs/corpus/`, so you
+can index something real without supplying your own documents:
 
 ```bash
 uv run python -m rag.ingest docs/corpus/ --reset
 ```
 
-`--reset` clears the namespace first so removed documents don't linger in the index.
+Point it at any directory of `.txt`, `.md`, or `.pdf` files to index your own
+instead. `--reset` clears the namespace first so removed documents don't linger
+in the index. This is the step that creates the Pinecone index.
+
+**Skipping ingestion is supported.** Run nothing here and the agent works as a
+web-search-only researcher: `retrieve()` treats a missing index as an empty
+knowledge base, so the researcher node falls back to Tavily, the writer cites
+only web sources, and the demo UI's Sources panel reads *No chunks retrieved*.
+Two caveats: `PINECONE_API_KEY` must still be valid — the retriever
+authenticates before it can discover there is no index — and answers to
+questions about your internal documents will be wrong until you ingest them.
 
 **6. Start the server**
 
@@ -216,7 +227,7 @@ Ingestion and retrieval are fully decoupled. Run `ingest.py` independently on a 
 
 **Chunking strategy:** `RecursiveCharacterTextSplitter` with `chunk_size=512` and `chunk_overlap=50`. Each chunk is labelled with its source filename in metadata so the writer node can cite it.
 
-**Retrieval:** Semantic similarity search using the embedded user query against the Pinecone index. Top-k results are returned with source metadata and passed directly into the writer node's context window.
+**Retrieval:** Semantic similarity search using the embedded user query against the Pinecone index. Top-k results are returned with source metadata and passed directly into the writer node's context window. If the index does not exist yet — nothing has been ingested — retrieval returns no chunks instead of raising, so the agent degrades to web search rather than failing the request.
 
 ---
 
@@ -229,6 +240,8 @@ Ingestion and retrieval are fully decoupled. Run `ingest.py` independently on a 
 - `eval/judges.py` — hand-rolled LLM judges (faithfulness, answer relevancy, context precision, abstention), judged by `gpt-4o` to avoid self-preference bias with the agent's `gpt-4o-mini`.
 - `eval/run.py` — runs a retrieval-only pass and a full end-to-end pass against the live agent graph, reporting per-cluster scores plus steps, tokens, cost, and latency.
 - `eval/corpus_src/*.md` + `eval/generate_corpus.py` — a fictional-company document corpus rendered to `docs/corpus/*.pdf`, so scores measure the pipeline rather than the model's parametric knowledge. Every figure traces to `docs/corpus_facts.md`.
+
+**Limitation:** the corpus documents and the golden set's `reference_answer` fields are LLM-generated rather than human-authored, so the ground truth shares a model lineage with the system under test — the judged scores are useful for tracking regressions between runs, not as absolute quality figures.
 
 Run with:
 
